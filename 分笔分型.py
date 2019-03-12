@@ -9,6 +9,62 @@ Created on Wed Feb 20 15:25:03 2019
 import pandas as pd
 
 
+
+def FenXing(k_data):
+    after_fenxing = pd.DataFrame()
+    temp_data = k_data[:1]
+    zoushi = [3]
+    for i in range(len(k_data)):
+        case1_1 = (temp_data.high.iloc[-1] > k_data.high[i] and temp_data.low.iloc[-1] < k_data.low[i])# 第1根包含第2根
+        case1_2 = temp_data.high.iloc[-1] > k_data.high[i] and temp_data.low.iloc[-1] == k_data.low[i]# 第1根包含第2根
+        case1_3 = temp_data.high.iloc[-1] == k_data.high[i] and temp_data.low.iloc[-1] < k_data.low[i]# 第1根包含第2根
+        case2_1 = temp_data.high.iloc[-1] < k_data.high[i] and temp_data.low.iloc[-1] > k_data.low[i] # 第2根包含第1根
+        case2_2 = temp_data.high.iloc[-1] < k_data.high[i] and temp_data.low.iloc[-1] == k_data.low[i] # 第2根包含第1根
+        case2_3 = temp_data.high.iloc[-1] == k_data.high[i] and temp_data.low.iloc[-1] > k_data.low[i] # 第2根包含第1根
+        case3 = temp_data.high.iloc[-1] == k_data.high[i] and temp_data.low.iloc[-1] == k_data.low[i] # 第1根等于第2根
+        case4 = temp_data.high.iloc[-1] > k_data.high[i] and temp_data.low.iloc[-1] > k_data.low[i] # 向下趋势
+        case5 = temp_data.high.iloc[-1] < k_data.high[i] and temp_data.low.iloc[-1] < k_data.low[i] # 向上趋势
+        if case1_1 or case1_2 or case1_3:
+            if zoushi[-1] == 4:
+                temp_data.high.iloc[-1] = k_data.high.iloc[i]
+            else:
+                temp_data.low.iloc[-1] = k_data.low.iloc[i]
+            
+        elif case2_1 or case2_2 or case2_3:
+            temp_temp = temp_data.iloc[-1:]
+            temp_data = k_data[i:i+1]
+            if zoushi[-1] == 4:
+                temp_data.high.iloc[-1] = temp_temp.high.iloc[0]
+            else:
+                temp_data.low.iloc[-1] = temp_temp.low.iloc[0]
+                
+        elif case3:
+            zoushi.append(3)
+            after_fenxing = pd.concat([after_fenxing,temp_data],axis = 0)
+            temp_data = k_data[i:i+1]
+            
+        
+        elif case4:
+            zoushi.append(4)
+            after_fenxing = pd.concat([after_fenxing,temp_data],axis = 0)
+            temp_data = k_data[i:i+1]
+            
+        elif case5:
+            zoushi.append(5)
+            after_fenxing = pd.concat([after_fenxing,temp_data],axis = 0)
+            temp_data = k_data[i:i+1]
+    for i in range(len(after_fenxing)):
+        if after_fenxing.open.iloc[i] > after_fenxing.close.iloc[i]:
+            after_fenxing.open.iloc[i] = after_fenxing.high.iloc[i]
+            after_fenxing.close.iloc[i] = after_fenxing.low.iloc[i]
+        else:
+            after_fenxing.open.iloc[i] = after_fenxing.low.iloc[i]
+            after_fenxing.close.iloc[i] = after_fenxing.high.iloc[i]
+    return k_data,after_fenxing,temp_data
+
+
+
+
 def FenBi(k_data):
     temp_num = 0#上一个顶或底的位置
     temp_high = 0 #上一个顶的high值
@@ -75,12 +131,20 @@ def FenBi(k_data):
             i += 1
     return result
 
+
+
 def do_work():
     k_data = pd.read_excel(r'C:\Users\15308\Desktop\嘉沃资产\分笔分型\data.xlsx')
     k_data.columns = ['high','low','open','close']
     k_data['time'] = k_data.index
     k_data.index = range(len(k_data))
     result = FenBi(k_data)
+    df = result
+    time = list(df.time.values)
+    k_data,after_fenxing,temp_data = FenXing(k_data)
+    for i in range(len(after_fenxing)):
+        if (after_fenxing.iloc[i]['time'] in time) and (after_fenxing.iloc[i+2]['time'] in time):
+            df = df[~df['time'].isin([after_fenxing.iloc[i]['time'],after_fenxing.iloc[i+2]['time']])]
     return result
 
 if __name__ == '__main__':
